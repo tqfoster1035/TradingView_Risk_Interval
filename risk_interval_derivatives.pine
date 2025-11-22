@@ -127,7 +127,7 @@ var float prevDayClose = na
 // Detect new trading day (futures open at 6:00 PM ET / 18:00 ET)
 newDay = ta.change(time("D"))
 
-if newDay
+if newDay != 0
     prevDayClose := close[1]
 
 // Use current close if previous day close not yet established
