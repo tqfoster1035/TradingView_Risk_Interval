@@ -107,10 +107,24 @@ else
 showPrevClose = input.bool(true, "Previous Close", group="Reference Lines")
 show1xRI = input.bool(true, "1× RI", group="Derivative Levels")
 show2xRI = input.bool(true, "2× RI", group="Derivative Levels")
+show4xRI = input.bool(true, "4× RI", group="Derivative Levels")
 showHalfRI = input.bool(true, "½× RI", group="Derivative Levels")
 showQuarterRI = input.bool(true, "¼× RI", group="Derivative Levels")
-showEighthRI = input.bool(false, "⅛× RI (disable for NQ)", group="Derivative Levels", 
+showEighthRI = input.bool(false, "⅛× RI (disable for NQ)", group="Derivative Levels",
      tooltip="Can be noisy on high-value instruments like NQ")
+
+// ============================================================================
+// LABEL TOGGLES
+// ============================================================================
+showLabels = input.bool(true, "Show Labels", group="Labels",
+     tooltip="Display price labels on all active levels")
+showLabelPrevClose = input.bool(true, "Previous Close Label", group="Labels")
+showLabel1xRI = input.bool(true, "1× RI Labels", group="Labels")
+showLabel2xRI = input.bool(true, "2× RI Labels", group="Labels")
+showLabel4xRI = input.bool(true, "4× RI Labels", group="Labels")
+showLabelHalfRI = input.bool(true, "½× RI Labels", group="Labels")
+showLabelQuarterRI = input.bool(true, "¼× RI Labels", group="Labels")
+showLabelEighthRI = input.bool(false, "⅛× RI Labels", group="Labels")
 
 // ============================================================================
 // ALERT TOGGLES
@@ -127,6 +141,8 @@ alert1xRI = input.bool(true, "1× RI Alerts", group="Alert Controls",
      tooltip="Alert when price crosses 1× RI upper or lower levels")
 alert2xRI = input.bool(true, "2× RI Alerts", group="Alert Controls",
      tooltip="Alert when price crosses 2× RI upper or lower levels")
+alert4xRI = input.bool(true, "4× RI Alerts", group="Alert Controls",
+     tooltip="Alert when price crosses 4× RI upper or lower levels (extreme moves)")
 alertHalfRI = input.bool(false, "½× RI Alerts", group="Alert Controls",
      tooltip="Can be noisy - typically disabled for ES/NQ, useful for GC")
 alertQuarterRI = input.bool(false, "¼× RI Alerts", group="Alert Controls",
@@ -172,6 +188,7 @@ anchorPrice = na(prevDayClose) ? close : prevDayClose
 // Upper levels
 upper_1x = anchorPrice + baseRI
 upper_2x = anchorPrice + (baseRI * 2)
+upper_4x = anchorPrice + (baseRI * 4)
 upper_half = anchorPrice + (baseRI * 0.5)
 upper_quarter = anchorPrice + (baseRI * 0.25)
 upper_eighth = anchorPrice + (baseRI * 0.125)
@@ -179,6 +196,7 @@ upper_eighth = anchorPrice + (baseRI * 0.125)
 // Lower levels
 lower_1x = anchorPrice - baseRI
 lower_2x = anchorPrice - (baseRI * 2)
+lower_4x = anchorPrice - (baseRI * 4)
 lower_half = anchorPrice - (baseRI * 0.5)
 lower_quarter = anchorPrice - (baseRI * 0.25)
 lower_eighth = anchorPrice - (baseRI * 0.125)
@@ -208,15 +226,27 @@ plot(show1xRI ? lower_1x : na,
      style=plot.style_line)
 
 // 2× RI
-plot(show2xRI ? upper_2x : na, 
-     title="2× RI Upper", 
-     color=colorUpper, 
-     linewidth=lineWidth, 
+plot(show2xRI ? upper_2x : na,
+     title="2× RI Upper",
+     color=colorUpper,
+     linewidth=lineWidth,
      style=plot.style_line)
-plot(show2xRI ? lower_2x : na, 
-     title="2× RI Lower", 
-     color=colorLower, 
-     linewidth=lineWidth, 
+plot(show2xRI ? lower_2x : na,
+     title="2× RI Lower",
+     color=colorLower,
+     linewidth=lineWidth,
+     style=plot.style_line)
+
+// 4× RI
+plot(show4xRI ? upper_4x : na,
+     title="4× RI Upper",
+     color=colorUpper,
+     linewidth=lineWidth,
+     style=plot.style_line)
+plot(show4xRI ? lower_4x : na,
+     title="4× RI Lower",
+     color=colorLower,
+     linewidth=lineWidth,
      style=plot.style_line)
 
 // ½× RI
@@ -249,11 +279,116 @@ plot(showEighthRI ? upper_eighth : na,
      color=colorUpper, 
      linewidth=lineWidth, 
      style=plot.style_line)
-plot(showEighthRI ? lower_eighth : na, 
-     title="⅛× RI Lower", 
-     color=colorLower, 
-     linewidth=lineWidth, 
+plot(showEighthRI ? lower_eighth : na,
+     title="⅛× RI Lower",
+     color=colorLower,
+     linewidth=lineWidth,
      style=plot.style_line)
+
+// ============================================================================
+// PRICE LABELS
+// ============================================================================
+// Display price labels on the right side of each level line
+
+if barstate.islast and showLabels
+    // Previous Close Label
+    if showPrevClose and showLabelPrevClose
+        label.new(bar_index, anchorPrice,
+             text="Prev Close: " + str.tostring(anchorPrice, format.mintick),
+             style=label.style_label_left,
+             color=colorPrevClose,
+             textcolor=color.white,
+             size=size.small)
+
+    // 4× RI Labels (most extreme)
+    if show4xRI and showLabel4xRI
+        label.new(bar_index, upper_4x,
+             text="4× RI: " + str.tostring(upper_4x, format.mintick),
+             style=label.style_label_left,
+             color=colorUpper,
+             textcolor=color.white,
+             size=size.small)
+        label.new(bar_index, lower_4x,
+             text="4× RI: " + str.tostring(lower_4x, format.mintick),
+             style=label.style_label_left,
+             color=colorLower,
+             textcolor=color.white,
+             size=size.small)
+
+    // 2× RI Labels
+    if show2xRI and showLabel2xRI
+        label.new(bar_index, upper_2x,
+             text="2× RI: " + str.tostring(upper_2x, format.mintick),
+             style=label.style_label_left,
+             color=colorUpper,
+             textcolor=color.white,
+             size=size.small)
+        label.new(bar_index, lower_2x,
+             text="2× RI: " + str.tostring(lower_2x, format.mintick),
+             style=label.style_label_left,
+             color=colorLower,
+             textcolor=color.white,
+             size=size.small)
+
+    // 1× RI Labels
+    if show1xRI and showLabel1xRI
+        label.new(bar_index, upper_1x,
+             text="1× RI: " + str.tostring(upper_1x, format.mintick),
+             style=label.style_label_left,
+             color=colorUpper,
+             textcolor=color.white,
+             size=size.small)
+        label.new(bar_index, lower_1x,
+             text="1× RI: " + str.tostring(lower_1x, format.mintick),
+             style=label.style_label_left,
+             color=colorLower,
+             textcolor=color.white,
+             size=size.small)
+
+    // ½× RI Labels
+    if showHalfRI and showLabelHalfRI
+        label.new(bar_index, upper_half,
+             text="½× RI: " + str.tostring(upper_half, format.mintick),
+             style=label.style_label_left,
+             color=colorUpper,
+             textcolor=color.white,
+             size=size.small)
+        label.new(bar_index, lower_half,
+             text="½× RI: " + str.tostring(lower_half, format.mintick),
+             style=label.style_label_left,
+             color=colorLower,
+             textcolor=color.white,
+             size=size.small)
+
+    // ¼× RI Labels
+    if showQuarterRI and showLabelQuarterRI
+        label.new(bar_index, upper_quarter,
+             text="¼× RI: " + str.tostring(upper_quarter, format.mintick),
+             style=label.style_label_left,
+             color=colorUpper,
+             textcolor=color.white,
+             size=size.small)
+        label.new(bar_index, lower_quarter,
+             text="¼× RI: " + str.tostring(lower_quarter, format.mintick),
+             style=label.style_label_left,
+             color=colorLower,
+             textcolor=color.white,
+             size=size.small)
+
+    // ⅛× RI Labels
+    if showEighthRI and showLabelEighthRI
+        label.new(bar_index, upper_eighth,
+             text="⅛× RI: " + str.tostring(upper_eighth, format.mintick),
+             style=label.style_label_left,
+             color=colorUpper,
+             textcolor=color.white,
+             size=size.small)
+        label.new(bar_index, lower_eighth,
+             text="⅛× RI: " + str.tostring(lower_eighth, format.mintick),
+             style=label.style_label_left,
+             color=colorLower,
+             textcolor=color.white,
+             size=size.small)
 
 // ============================================================================
 // INFORMATION TABLE
@@ -310,6 +445,8 @@ if barstate.islast
         activeAlerts := activeAlerts + "1× "
     if alert2xRI
         activeAlerts := activeAlerts + "2× "
+    if alert4xRI
+        activeAlerts := activeAlerts + "4× "
     if alertHalfRI
         activeAlerts := activeAlerts + "½× "
     if alertQuarterRI
@@ -353,10 +490,24 @@ if alert2xRI and crossedUpper2x
 if alert2xRI and crossedLower2x
     alert("{{ticker}} crossed BELOW 2× RI Lower at {{close}}", alert.freq_once_per_bar)
 
-alertcondition(alert2xRI and crossedUpper2x, title="Price Above 2× RI Upper", 
+alertcondition(alert2xRI and crossedUpper2x, title="Price Above 2× RI Upper",
      message="{{ticker}} crossed above 2× RI Upper level at {{close}}")
-alertcondition(alert2xRI and crossedLower2x, title="Price Below 2× RI Lower", 
+alertcondition(alert2xRI and crossedLower2x, title="Price Below 2× RI Lower",
      message="{{ticker}} crossed below 2× RI Lower level at {{close}}")
+
+// 4× RI Alerts
+crossedUpper4x = ta.crossover(close, upper_4x)
+crossedLower4x = ta.crossunder(close, lower_4x)
+
+if alert4xRI and crossedUpper4x
+    alert("{{ticker}} crossed ABOVE 4× RI Upper at {{close}}", alert.freq_once_per_bar)
+if alert4xRI and crossedLower4x
+    alert("{{ticker}} crossed BELOW 4× RI Lower at {{close}}", alert.freq_once_per_bar)
+
+alertcondition(alert4xRI and crossedUpper4x, title="Price Above 4× RI Upper",
+     message="{{ticker}} crossed above 4× RI Upper level at {{close}}")
+alertcondition(alert4xRI and crossedLower4x, title="Price Below 4× RI Lower",
+     message="{{ticker}} crossed below 4× RI Lower level at {{close}}")
 
 // ½× RI Alerts
 crossedUpperHalf = ta.crossover(close, upper_half)
