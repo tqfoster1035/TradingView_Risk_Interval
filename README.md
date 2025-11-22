@@ -19,15 +19,14 @@ The indicator auto-detects ES/NQ and updates parameters automatically when switc
 
 ## What is Risk Interval?
 
-Risk Interval (RI) is a mathematical calculation that identifies price levels where market structure creates natural pivot points:
+Risk Interval (RI) is a proprietary methodology created by Matt Cowart (Rocket Scooter) that identifies price levels where market structure creates natural pivot points.
 
-```
-RI = (Initial Margin × Circuit Breaker %) / Point Value
-```
+### Official RI Values (December 2025)
+**Source: Rocket Scooter Platform**
+- **ES (MESZ25):** 58.75 points
+- **NQ (MNQZ25):** 211.25 points
 
-### Current Values
-- **ES:** ~58.70 points (based on $21,424 margin, 13.7% CB, $50 point value)
-- **NQ:** ~210.51 points (based on $30,732 margin, 13.7% CB, $20 point value)
+These are the verified RI Prime values from Matt Cowart's official Rocket Scooter platform.
 
 ### Why It Works
 
@@ -78,12 +77,21 @@ When price approaches RI levels, trading systems recognize proximity to critical
 
 ### Quarterly Maintenance
 
-CME updates margins typically in **March, June, September, December**.
+Contract periods change quarterly (typically **March, June, September, December**).
 
 **Update procedure:**
-1. Check new margins: https://www.cmegroup.com/trading/price-limits.html
-2. Edit `risk_interval_derivatives.pine` lines 61-70
-3. Update only `initialMargin` values (keep `pointValue` and `circuitBreakerPct` constant)
+1. Check Rocket Scooter platform for new official RI Prime values
+2. Edit `risk_interval_derivatives.pine` lines 84-87
+3. Update the official RI values for ES and NQ
+4. Update contract period comments (e.g., MESZ25 → MESH26)
+
+**Example:**
+```pinescript
+if instrumentSelect == "ES"
+    baseRI := 58.75    // ES official RI (MESH26 contract period)
+else if instrumentSelect == "NQ"
+    baseRI := 211.25   // NQ official RI (MNQH26 contract period)
+```
 
 **Or use Manual RI Override** in indicator settings (temporary solution).
 
@@ -103,19 +111,15 @@ TradingView_Risk_Interval/
 
 ## Technical Details
 
-### Formula Derivation
+### Official RI Values
 
-**Discovery:** Reverse-engineered from Matt Cowart's (Rocket Scooter) proprietary Risk Interval methodology.
+**Source:** Verified from Matt Cowart's official Rocket Scooter platform (December 2025)
 
-**Core calculation:**
-```
-RI = (Initial Margin × Circuit Breaker %) / Point Value
-```
+**Current Values:**
+- **ES (MESZ25):** 58.75 points
+- **NQ (MNQZ25):** 211.25 points
 
-**Why 13.7% (not 13%)?**
-- Theoretical NYSE Level 2 circuit breaker = 13%
-- Empirical testing showed 13.7% matches 2022 indicator values
-- 13.7% produces ES ~58.70, NQ ~210.51 (matches observed pivots)
+These are the exact values used in the Rocket Scooter platform, eliminating any calculation approximations or guesswork.
 
 ### Code Structure
 
@@ -132,6 +136,7 @@ Organized in logical order (4× → 3× → 2× → 1.5× → 1× → ¾× → �
 
 ## Version History
 
+- **v3.2.0** (2025-11-22): Using official Rocket Scooter RI Prime values (verified, no calculations)
 - **v3.1.0** (2025-11-22): Added 3 new derivative levels (3×, 1.5×, ¾× RI) - 9 total levels
 - **v3.0.0** (2025-11-22): Code reorganization, formalized ES/NQ-only scope
 - **v2.0.0** (2025-11-22): Auto-detection, RI recalibration to empirical values
@@ -143,21 +148,23 @@ See `CHANGELOG.md` for detailed version history.
 
 ## Research & Background
 
-For complete formula derivation, circuit breaker research, and multi-instrument analysis (GC, CL, NG, BTC), see `RI_Indicator_Handoff_Summary.md`.
-
 **Original methodology:** Matt Cowart, Founder/CEO Rocket Scooter & Rocket Place
+
+**RI Values Source:** Official Rocket Scooter platform (verified December 2025)
+
+For historical formula derivation and multi-instrument analysis (GC, CL, NG, BTC), see `RI_Indicator_Handoff_Summary.md`.
 
 ---
 
 ## Support & Updates
 
-**CME Resources:**
+**Rocket Scooter Platform:**
+- Check Rocket Scooter for official RI Prime values each contract period
+- Contract periods typically change March, June, September, December
+
+**CME Resources (Reference):**
 - Price Limits: https://www.cmegroup.com/trading/price-limits.html
 - Margins: https://www.cmegroup.com/solutions/risk-management/performance-bonds-margins.html
-- Circuit Breakers: https://www.cmegroup.com/solutions/market-access/globex/trade-on-globex/faq-dynamic-circuit-breakers.html
-
-**Quarterly margin changes:**
-Check CME announcements typically 1 week before contract expiration.
 
 ---
 
@@ -168,6 +175,6 @@ Personal use. Original Risk Interval methodology by Matt Cowart (Rocket Scooter)
 ---
 
 **Last Updated:** 2025-11-22
-**Version:** v3.1.0
-**Status:** Production ready - ES/NQ only
+**Version:** v3.2.0
+**Status:** Production ready - ES/NQ only - Official Rocket Scooter values
 **Branch:** `claude/add-new-ri-levels-015C76GXdQCoeHYw97tuJWCs`

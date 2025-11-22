@@ -5,10 +5,13 @@ indicator("Risk Interval Derivatives", shorttitle="RI for RS", overlay=true, max
 // RISK INTERVAL INDICATOR - ES/NQ FUTURES
 // ============================================================================
 // Automatically plots Risk Interval derivative levels (4×, 3×, 2×, 1.5×, 1×, ¾×, ½×, ¼×, ⅛×)
-// based on margin requirements and circuit breaker thresholds.
+// using official Rocket Scooter RI Prime values.
 //
-// Formula: RI = (Initial Margin × Circuit Breaker %) / Point Value
+// Official RI Values (December 2025):
+//   ES (MESZ25): 58.75 points
+//   NQ (MNQZ25): 211.25 points
 //
+// Source: Rocket Scooter platform - Matt Cowart (original methodology creator)
 // Supported Instruments: ES (E-mini S&P 500), NQ (E-mini Nasdaq 100)
 // ============================================================================
 
@@ -72,14 +75,19 @@ else if instrumentSelect == "NQ"
 // ============================================================================
 // RISK INTERVAL CALCULATION
 // ============================================================================
+// Using official Rocket Scooter RI Prime values (verified December 2025)
+// Source: Rocket Scooter platform - Matt Cowart's official values
 
 var float baseRI = 0.0
 
 if useManualRI
     baseRI := manualRIValue
 else
-    // Standard formula: RI = (Initial Margin × Circuit Breaker %) / Point Value
-    baseRI := (initialMargin * circuitBreakerPct) / pointValue
+    // Official Rocket Scooter RI Prime values
+    if instrumentSelect == "ES"
+        baseRI := 58.75    // ES official RI (MESZ25 contract period)
+    else if instrumentSelect == "NQ"
+        baseRI := 211.25   // NQ official RI (MNQZ25 contract period)
 
 // ============================================================================
 // VISIBILITY TOGGLES

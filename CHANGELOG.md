@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.2.0] - 2025-11-22 - Official Rocket Scooter RI Values
+
+### Changed
+- **Switched from calculated to official RI values**
+  - Now using verified Rocket Scooter RI Prime values directly
+  - **ES (MESZ25):** 58.75 points (official, was ~58.70 calculated)
+  - **NQ (MNQZ25):** 211.25 points (official, was ~210.51 calculated)
+  - Eliminates calculation approximations and guesswork
+
+- **Updated calculation method** (lines 72-87)
+  - Removed formula-based calculation: `RI = (Initial Margin × Circuit Breaker %) / Point Value`
+  - Now uses hardcoded official values from Rocket Scooter platform
+  - Source: Matt Cowart's official Rocket Scooter platform values
+
+### Documentation
+- Updated README with official RI values
+- Revised quarterly maintenance procedure (check Rocket Scooter for new values)
+- Updated technical details section to reflect official sourcing
+- Updated header comments to reference official values
+
+---
+
 ## [3.1.0] - 2025-11-22 - Extended Derivative Levels
 
 ### Added
@@ -200,6 +222,7 @@ New RI calculation: (22,000 × 0.137) / 50 = **60.28 points**
 
 ## Version History Summary
 
+- **v3.2.0:** Using official Rocket Scooter RI Prime values (no more calculations)
 - **v3.1.0:** Added 3 new derivative levels (3×, 1.5×, ¾× RI) - 9 total levels
 - **v3.0.0:** Code reorganization, formalized ES/NQ-only scope
 - **v2.0.0:** Auto-detection, RI recalibration to match empirical values
@@ -208,6 +231,6 @@ New RI calculation: (22,000 × 0.137) / 50 = **60.28 points**
 ---
 
 **Last Updated:** 2025-11-22
-**Version:** v3.1.0
+**Version:** v3.2.0
 **Branch:** `claude/add-new-ri-levels-015C76GXdQCoeHYw97tuJWCs`
-**Status:** Production ready - ES/NQ only
+**Status:** Production ready - ES/NQ only - Official Rocket Scooter values
