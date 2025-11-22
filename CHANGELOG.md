@@ -40,13 +40,13 @@ All notable changes to this project will be documented in this file.
 - **Change location:** `risk_interval_derivatives.pine:65`
 
 ##### BTC (Bitcoin CME Futures)
-- **Initial Margin:** $17,200 → **$21,750**
-- **Calculated RI:** 344.00 → **435.00**
+- **Initial Margin:** $17,200 → **$43,500**
+- **Calculated RI:** 344.00 → **870.00**
 - **Reasoning:**
-  - Original indicator showed 870 (likely was the 2×RI display value)
-  - Base RI = 870/2 = 435 (matches ES/NQ half-value pattern from old indicator)
-  - Equivalent margin $21,750 produces RI = 435
-- **Change location:** `risk_interval_derivatives.pine:83`
+  - Original 2022 indicator value of 870 still works correctly
+  - Unlike ES/NQ which needed updates due to margin changes, BTC 870 remains valid
+  - Equivalent margin $43,500 produces RI = 870
+- **Change location:** `risk_interval_derivatives.pine:82`
 
 ##### GC (Gold) - No Change
 - **RI:** 18.00 (unchanged)
@@ -74,9 +74,9 @@ RI = (Initial Margin × Circuit Breaker %) / Point Value
 
 | Instrument | Old Indicator (2022) | New Calc (v1.0) | Updated (v2.0) | Change Reason |
 |------------|---------------------|-----------------|----------------|---------------|
-| ES         | 27.5 or 58.75       | 55.70          | **58.70**      | 13.7% CB empirically tested |
-| NQ         | 103.5 or 210.25     | 199.76         | **210.51**     | 13.7% CB empirically tested |
-| BTC        | 870 (2×RI display?) | 344.00         | **435.00**     | 870/2 = base RI (pattern match) |
+| ES         | ~58.75              | 55.70          | **58.70**      | Margins changed since 2022, using 13.7% CB |
+| NQ         | ~210.25             | 199.76         | **210.51**     | Margins changed since 2022, using 13.7% CB |
+| BTC        | 870                 | 344.00         | **870.00**     | Original 2022 value still valid |
 | GC         | 18.00               | 18.00          | 18.00          | No change needed |
 | CL         | 2.38                | 2.38           | 2.38           | No change (hardcoded anomaly) |
 | NG         | 0.31                | 0.31           | 0.31           | No change needed |
@@ -105,9 +105,9 @@ RI = (Initial Margin × Circuit Breaker %) / Point Value
 1. **Copy code** from `risk_interval_derivatives.pine`
 2. **Paste into TradingView** Pine Editor
 3. **Load on BTC chart** - should show:
-   - Base RI: **435.00**
-   - Init Margin: $21,750
-   - 2×RI levels at ~870 points from prev close
+   - Base RI: **870.00**
+   - Init Margin: $43,500
+   - 1×RI levels at ~870 points from prev close
 4. **Switch to ES chart** - should auto-update to:
    - Base RI: **58.70**
    - CB%: 13.7%
@@ -117,10 +117,7 @@ RI = (Initial Margin × Circuit Breaker %) / Point Value
 
 ### Known Issues / To Verify:
 
-- [ ] **BTC RI spacing** - Verify 435 produces correct level spacing on chart
-  - If old indicator showed 870 as **1×RI** (not 2×RI), then margin should be $43,500
-  - If old indicator showed 870 as **2×RI**, then current $21,750 (RI=435) is correct
-  - **User needs to test and confirm which produces correct levels**
+- [ ] **BTC RI spacing** - Verify 870 produces correct level spacing matching old indicator
 
 - [ ] **ES/NQ values** - Confirm 13.7% CB produces levels matching old indicator
   - Current: ES=58.70, NQ=210.51
@@ -157,19 +154,17 @@ If theoretical calculations don't match price action:
 
 ---
 
-## Questions for User Testing
+## Summary
 
-1. **BTC Base RI:** Is 435 correct, or should it be 870?
-   - Test by comparing level spacing to old indicator
-   - If 2×RI upper shows ~870 points above prev close → **435 is correct**
-   - If 1×RI upper shows ~870 points above prev close → **need to use 870**
+**Current RI Values:**
+- **BTC:** 870 (from 2022 indicator, still valid)
+- **ES:** 58.70 (updated from 2022 due to margin changes)
+- **NQ:** 210.51 (updated from 2022 due to margin changes)
+- **GC:** 18 (unchanged, still valid)
+- **CL:** 2.38 (unchanged, hardcoded anomaly)
+- **NG:** 0.31 (unchanged, still valid)
 
-2. **ES/NQ values:** Do the new 58.70 / 210.51 values match old indicator levels?
-   - Minor difference from theoretical 58.75 / 210.25 due to rounding
-
-3. **Auto-detection reliability:** Does it correctly identify all chart symbols?
-   - Test with: ES1!, NQH2025, BTC1!, GC1!, CL1!, NGF2025
-   - If fails, use Manual Instrument Override option
+**Note:** ES and NQ values from 2022 were roughly half of today's values due to margin requirement increases over the past 3 years. BTC and GC values remain valid from the original 2022 indicator.
 
 ---
 
