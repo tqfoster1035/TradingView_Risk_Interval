@@ -125,7 +125,7 @@ lineStyleValue = lineStyle == "Solid" ? line.style_solid :
 var float prevDayClose = na
 
 // Detect new trading day (futures open at 6:00 PM ET / 18:00 ET)
-newDay = ta.change(time("D"))
+newDay = ta.change(time("D")) != 0
 
 if newDay
     prevDayClose := close[1]
