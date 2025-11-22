@@ -2,7 +2,7 @@
 
 **TradingView Pine Script indicator for E-mini S&P 500 (ES) and E-mini Nasdaq 100 (NQ) futures**
 
-Automatically plots Risk Interval derivative levels (4×, 2×, 1×, ½×, ¼×, ⅛×) based on CME margin requirements and circuit breaker thresholds. Predicts high-volume pivot points where margin risk intersects with halt thresholds.
+Automatically plots Risk Interval derivative levels (4×, 3×, 2×, 1.5×, 1×, ¾×, ½×, ¼×, ⅛×) based on CME margin requirements and circuit breaker thresholds. Predicts high-volume pivot points where margin risk intersects with halt thresholds.
 
 ---
 
@@ -11,7 +11,7 @@ Automatically plots Risk Interval derivative levels (4×, 2×, 1×, ½×, ¼×, 
 1. **Copy** `risk_interval_derivatives.pine` code
 2. **Paste** into TradingView Pine Editor
 3. **Add to chart** (ES or NQ)
-4. **Configure alerts** (recommended: 4×, 2×, 1× only)
+4. **Configure alerts** (recommended: 4×, 3×, 2×, 1.5×, 1× for significant moves)
 
 The indicator auto-detects ES/NQ and updates parameters automatically when switching charts.
 
@@ -45,15 +45,15 @@ When price approaches RI levels, trading systems recognize proximity to critical
 
 ### Core Functionality
 - ✓ **Auto-detection:** Identifies ES/NQ from chart symbol
-- ✓ **Derivative levels:** 4×, 2×, 1×, ½×, ¼×, ⅛× RI
+- ✓ **Derivative levels:** 4×, 3×, 2×, 1.5×, 1×, ¾×, ½×, ¼×, ⅛× RI (9 total levels)
 - ✓ **Daily anchor:** Levels calculated from previous close
 - ✓ **Price labels:** Optional labels on each level
 - ✓ **Info table:** Real-time parameters display
 
 ### Alert Controls
 - ✓ **Granular toggles:** Enable/disable alerts per level
-- ✓ **Noise filtering:** Disable noisy levels (½×, ¼×, ⅛×)
-- ✓ **Recommended:** Enable 4×, 2×, 1× only for ES/NQ
+- ✓ **Noise filtering:** Disable noisy levels (¾×, ½×, ¼×, ⅛×)
+- ✓ **Recommended:** Enable 4×, 3×, 2×, 1.5×, 1× for significant moves
 
 ### Customization
 - ✓ **Visibility toggles:** Show/hide individual levels
@@ -68,11 +68,13 @@ When price approaches RI levels, trading systems recognize proximity to critical
 
 **Enable:**
 - 4× RI (extreme moves, rare but significant)
+- 3× RI (very strong directional moves)
 - 2× RI (strong directional moves)
+- 1.5× RI (intermediate significant moves)
 - 1× RI (base level, frequent tests)
 
 **Disable:**
-- ½×, ¼×, ⅛× RI (typically too noisy for ES/NQ)
+- ¾×, ½×, ¼×, ⅛× RI (typically too noisy for ES/NQ)
 
 ### Quarterly Maintenance
 
@@ -117,19 +119,20 @@ RI = (Initial Margin × Circuit Breaker %) / Point Value
 
 ### Code Structure
 
-Organized in logical order (4× → 2× → 1× → ½× → ¼× → ⅛×):
+Organized in logical order (4× → 3× → 2× → 1.5× → 1× → ¾× → ½× → ¼× → ⅛×):
 1. **Lines 1-83:** Configuration & RI calculation
 2. **Lines 84-165:** Settings (visibility, labels, alerts, colors)
-3. **Lines 167-196:** Derivative level calculations
-4. **Lines 197-280:** Plot statements
-5. **Lines 282-387:** Price labels
-6. **Lines 389-458:** Information table
-7. **Lines 460-548:** Alert conditions
+3. **Lines 167-207:** Derivative level calculations (9 levels)
+4. **Lines 209-305:** Plot statements
+5. **Lines 307-447:** Price labels
+6. **Lines 449-563:** Information table
+7. **Lines 565-659:** Alert conditions
 
 ---
 
 ## Version History
 
+- **v3.1.0** (2025-11-22): Added 3 new derivative levels (3×, 1.5×, ¾× RI) - 9 total levels
 - **v3.0.0** (2025-11-22): Code reorganization, formalized ES/NQ-only scope
 - **v2.0.0** (2025-11-22): Auto-detection, RI recalibration to empirical values
 - **v1.0.0** (2025-11-22): Initial multi-instrument version (6 instruments)
@@ -165,5 +168,6 @@ Personal use. Original Risk Interval methodology by Matt Cowart (Rocket Scooter)
 ---
 
 **Last Updated:** 2025-11-22
+**Version:** v3.1.0
 **Status:** Production ready - ES/NQ only
-**Branch:** `claude/fix-instrument-chart-update-011hgaZcWqNTpVF25gLp46Yy`
+**Branch:** `claude/add-new-ri-levels-015C76GXdQCoeHYw97tuJWCs`

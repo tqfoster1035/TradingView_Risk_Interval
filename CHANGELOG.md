@@ -4,11 +4,42 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.1.0] - 2025-11-22 - Extended Derivative Levels
+
+### Added
+- **Three new derivative levels** for finer-grained price movement analysis
+  - **3× RI** - Very strong directional moves (between 4× and 2×)
+  - **1.5× RI** - Intermediate significant moves (between 2× and 1×)
+  - **¾× RI** - Minor significant levels (between 1× and ½×)
+
+- **Total levels now: 9** (previously 6)
+  - Complete order: 4×, 3×, 2×, 1.5×, 1×, ¾×, ½×, ¼×, ⅛× RI
+
+### Changed
+- **Visibility toggles** - Added controls for new levels
+- **Label toggles** - Added label controls for new levels
+- **Alert toggles** - Added alert controls for new levels
+- **Updated calculations** - Added upper/lower calculations for 3 new levels
+- **Updated plots** - Added 6 new plot statements (3 levels × 2 directions)
+- **Updated labels** - Added price labels for new levels
+- **Updated info table** - Alert status now includes new levels
+- **Updated alert logic** - Complete crossover/crossunder detection for new levels
+
+### Documentation
+- Updated README.md with new level counts and recommendations
+- Updated recommended alert settings: Enable 4×, 3×, 2×, 1.5×, 1× for significant moves
+- Updated code structure line numbers to reflect additions
+- Updated version history across all documentation files
+
+---
+
 ## [3.0.0] - 2025-11-22 - Code Reorganization & ES/NQ Focus
 
 ### Changed
 - **Complete code reorganization** for logical flow and maintainability
-  - All derivative levels now ordered consistently: 4× → 2× → 1× → ½× → ¼× → ⅛×
+  - All derivative levels ordered consistently (expanded to 9 levels in v3.1.0)
+  - Original v3.0 order: 4× → 2× → 1× → ½× → ¼× → ⅛×
+  - Current v3.1 order: 4× → 3× → 2× → 1.5× → 1× → ¾× → ½× → ¼× → ⅛×
   - Calculations, plots, labels, and alerts all follow same order
   - Enhanced section comments for clarity
   - Removed orphaned code blocks (4×RI was previously at end of file)
@@ -169,6 +200,7 @@ New RI calculation: (22,000 × 0.137) / 50 = **60.28 points**
 
 ## Version History Summary
 
+- **v3.1.0:** Added 3 new derivative levels (3×, 1.5×, ¾× RI) - 9 total levels
 - **v3.0.0:** Code reorganization, formalized ES/NQ-only scope
 - **v2.0.0:** Auto-detection, RI recalibration to match empirical values
 - **v1.0.0:** Initial multi-instrument version (6 instruments)
@@ -176,5 +208,6 @@ New RI calculation: (22,000 × 0.137) / 50 = **60.28 points**
 ---
 
 **Last Updated:** 2025-11-22
-**Branch:** `claude/fix-instrument-chart-update-011hgaZcWqNTpVF25gLp46Yy`
+**Version:** v3.1.0
+**Branch:** `claude/add-new-ri-levels-015C76GXdQCoeHYw97tuJWCs`
 **Status:** Production ready - ES/NQ only
