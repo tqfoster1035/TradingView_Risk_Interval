@@ -4,17 +4,47 @@ indicator("Risk Interval Derivatives", shorttitle="RI Derivatives", overlay=true
 // ============================================================================
 // INSTRUMENT CONFIGURATION
 // ============================================================================
-// Preset instrument parameters based on verified margin requirements and circuit breaker percentages
+// Auto-detect instrument from chart symbol, with manual override option
 
-instrumentSelect = input.string("ES", "Instrument", 
+// Auto-detect current symbol
+currentSymbol = syminfo.ticker
+symbolRoot = syminfo.root
+
+// Detect instrument based on symbol
+string detectedInstrument = "ES"  // Default fallback
+
+if str.contains(symbolRoot, "ES") or str.contains(currentSymbol, "ES")
+    detectedInstrument := "ES"
+else if str.contains(symbolRoot, "NQ") or str.contains(currentSymbol, "NQ")
+    detectedInstrument := "NQ"
+else if str.contains(symbolRoot, "GC") or str.contains(currentSymbol, "GC")
+    detectedInstrument := "GC"
+else if str.contains(symbolRoot, "CL") or str.contains(currentSymbol, "CL")
+    detectedInstrument := "CL"
+else if str.contains(symbolRoot, "NG") or str.contains(currentSymbol, "NG")
+    detectedInstrument := "NG"
+else if str.contains(symbolRoot, "BTC") or str.contains(currentSymbol, "BTC") or str.contains(currentSymbol, "MBT")
+    detectedInstrument := "BTC"
+
+// Manual instrument override (for when auto-detection fails or user wants different instrument)
+useManualInstrument = input.bool(false, "Manual Instrument Override",
+     group="Instrument Settings",
+     tooltip="Enable to manually select instrument instead of auto-detection")
+manualInstrumentSelect = input.string("ES", "Manual Instrument",
      options=["ES", "NQ", "GC", "CL", "NG", "BTC"],
-     tooltip="Select futures instrument. Values update automatically based on current margin requirements.")
+     group="Instrument Settings",
+     tooltip="Only used when Manual Instrument Override is enabled")
 
-// Manual override option for quarterly contract rollovers
-useManualRI = input.bool(false, "Manual RI Override", 
+// Final instrument selection
+instrumentSelect = useManualInstrument ? manualInstrumentSelect : detectedInstrument
+
+// Manual RI override option for quarterly contract rollovers
+useManualRI = input.bool(false, "Manual RI Override",
+     group="Instrument Settings",
      tooltip="Enable to manually input RI value for contract rollover periods")
-manualRIValue = input.float(58.75, "Manual RI Value", 
-     tooltip="Used only when Manual Override is enabled")
+manualRIValue = input.float(58.75, "Manual RI Value",
+     group="Instrument Settings",
+     tooltip="Used only when Manual RI Override is enabled")
 
 // ============================================================================
 // INSTRUMENT PARAMETERS
@@ -229,45 +259,50 @@ plot(showEighthRI ? lower_eighth : na,
 // Display current RI calculation parameters and alert status
 
 if barstate.islast
-    var table infoTable = table.new(position.bottom_right, 2, 9, 
-         border_width=1, 
+    var table infoTable = table.new(position.bottom_right, 2, 10,
+         border_width=1,
          border_color=color.gray,
          frame_width=1,
          frame_color=color.gray)
-    
+
     // Headers
-    table.cell(infoTable, 0, 0, "Parameter", 
+    table.cell(infoTable, 0, 0, "Parameter",
          text_color=color.white, bgcolor=color.new(color.gray, 50))
-    table.cell(infoTable, 1, 0, "Value", 
+    table.cell(infoTable, 1, 0, "Value",
          text_color=color.white, bgcolor=color.new(color.gray, 50))
-    
+
     // Instrument
     table.cell(infoTable, 0, 1, "Instrument", text_color=color.white)
-    table.cell(infoTable, 1, 1, instrumentSelect, text_color=color.yellow)
-    
+    instrumentDisplay = useManualInstrument ? instrumentSelect + " (Manual)" : instrumentSelect
+    table.cell(infoTable, 1, 1, instrumentDisplay, text_color=color.yellow)
+
+    // Detected Symbol
+    table.cell(infoTable, 0, 2, "Chart Symbol", text_color=color.white)
+    table.cell(infoTable, 1, 2, currentSymbol, text_color=color.new(color.white, 50))
+
     // Base RI
-    table.cell(infoTable, 0, 2, "Base RI", text_color=color.white)
-    table.cell(infoTable, 1, 2, str.tostring(baseRI, "#.####"), text_color=color.yellow)
-    
+    table.cell(infoTable, 0, 3, "Base RI", text_color=color.white)
+    table.cell(infoTable, 1, 3, str.tostring(baseRI, "#.####"), text_color=color.yellow)
+
     // Previous Close
-    table.cell(infoTable, 0, 3, "Prev Close", text_color=color.white)
-    table.cell(infoTable, 1, 3, str.tostring(anchorPrice, "#.##"), text_color=color.yellow)
-    
+    table.cell(infoTable, 0, 4, "Prev Close", text_color=color.white)
+    table.cell(infoTable, 1, 4, str.tostring(anchorPrice, "#.##"), text_color=color.yellow)
+
     // Initial Margin
-    table.cell(infoTable, 0, 4, "Init Margin", text_color=color.white)
-    table.cell(infoTable, 1, 4, "$" + str.tostring(initialMargin, "#,###"), text_color=color.white)
-    
+    table.cell(infoTable, 0, 5, "Init Margin", text_color=color.white)
+    table.cell(infoTable, 1, 5, "$" + str.tostring(initialMargin, "#,###"), text_color=color.white)
+
     // Circuit Breaker %
-    table.cell(infoTable, 0, 5, "CB %", text_color=color.white)
+    table.cell(infoTable, 0, 6, "CB %", text_color=color.white)
     cbDisplay = instrumentSelect == "CL" ? "N/A" : str.tostring(circuitBreakerPct * 100, "#.#") + "%"
-    table.cell(infoTable, 1, 5, cbDisplay, text_color=color.white)
-    
+    table.cell(infoTable, 1, 6, cbDisplay, text_color=color.white)
+
     // Point Value
-    table.cell(infoTable, 0, 6, "Point Value", text_color=color.white)
-    table.cell(infoTable, 1, 6, "$" + str.tostring(pointValue, "#.##"), text_color=color.white)
-    
+    table.cell(infoTable, 0, 7, "Point Value", text_color=color.white)
+    table.cell(infoTable, 1, 7, "$" + str.tostring(pointValue, "#.##"), text_color=color.white)
+
     // Alert Status
-    table.cell(infoTable, 0, 7, "Alerts Active", text_color=color.white)
+    table.cell(infoTable, 0, 8, "Alerts Active", text_color=color.white)
     activeAlerts = ""
     if alert1xRI
         activeAlerts := activeAlerts + "1× "
@@ -280,11 +315,11 @@ if barstate.islast
     if alertEighthRI
         activeAlerts := activeAlerts + "⅛× "
     alertDisplay = activeAlerts == "" ? "None" : activeAlerts
-    table.cell(infoTable, 1, 7, alertDisplay, text_color=color.yellow)
-    
+    table.cell(infoTable, 1, 8, alertDisplay, text_color=color.yellow)
+
     // Manual Override Status
-    table.cell(infoTable, 0, 8, "Manual RI", text_color=color.white)
-    table.cell(infoTable, 1, 8, useManualRI ? "YES" : "Auto", 
+    table.cell(infoTable, 0, 9, "Manual RI", text_color=color.white)
+    table.cell(infoTable, 1, 9, useManualRI ? "YES" : "Auto",
          text_color=useManualRI ? color.orange : color.lime)
 
 // ============================================================================
