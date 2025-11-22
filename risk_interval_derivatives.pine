@@ -1,5 +1,5 @@
 //@version=6
-indicator("Risk Interval Derivatives", shorttitle="RI Derivatives", overlay=true, max_lines_count=500)
+indicator("Risk Interval Derivatives", shorttitle="RI for RS", overlay=true, max_lines_count=500)
 
 // ============================================================================
 // RISK INTERVAL INDICATOR - ES/NQ FUTURES
@@ -156,7 +156,7 @@ lineStyleValue = lineStyle == "Solid" ? line.style_solid :
 var float prevDayClose = na
 
 // Detect new trading day
-newDay = ta.change(time("D"))
+newDay = ta.change(time("D")) !=0
 
 if newDay
     prevDayClose := close[1]
