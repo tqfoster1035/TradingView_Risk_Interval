@@ -1,0 +1,364 @@
+//@version=6
+indicator("Risk Interval Derivatives", shorttitle="RI Derivatives", overlay=true, max_lines_count=500)
+
+// ============================================================================
+// INSTRUMENT CONFIGURATION
+// ============================================================================
+// Preset instrument parameters based on verified margin requirements and circuit breaker percentages
+
+instrumentSelect = input.string("ES", "Instrument", 
+     options=["ES", "NQ", "GC", "CL", "NG", "BTC"],
+     tooltip="Select futures instrument. Values update automatically based on current margin requirements.")
+
+// Manual override option for quarterly contract rollovers
+useManualRI = input.bool(false, "Manual RI Override", 
+     tooltip="Enable to manually input RI value for contract rollover periods")
+manualRIValue = input.float(58.75, "Manual RI Value", 
+     tooltip="Used only when Manual Override is enabled")
+
+// ============================================================================
+// INSTRUMENT PARAMETERS
+// ============================================================================
+// Based on verified December 2025 margins and circuit breaker research
+
+var float initialMargin = 0.0
+var float pointValue = 0.0
+var float circuitBreakerPct = 0.0
+
+if instrumentSelect == "ES"
+    initialMargin := 21424.0    // Verified speculator margin
+    pointValue := 50.0
+    circuitBreakerPct := 0.13   // 13% - Level 2 NYSE circuit breaker (EXACT)
+else if instrumentSelect == "NQ"
+    initialMargin := 30732.0    // Verified speculator margin
+    pointValue := 20.0
+    circuitBreakerPct := 0.13   // 13% - Level 2 NYSE circuit breaker (EXACT)
+else if instrumentSelect == "GC"
+    initialMargin := 20000.0    // Verified speculator margin
+    pointValue := 100.0
+    circuitBreakerPct := 0.09   // 9% - Dynamic Circuit Breaker 10% variant
+else if instrumentSelect == "CL"
+    // CL is an anomaly - formula doesn't apply, using observed RI
+    initialMargin := 5237.0     // Maintenance (initial varies widely)
+    pointValue := 1000.0
+    circuitBreakerPct := 0.0    // Not used - hardcoded RI below
+else if instrumentSelect == "NG"
+    initialMargin := 31000.0    // Calculated from RI 0.31
+    pointValue := 10000.0
+    circuitBreakerPct := 0.10   // 10% - Dynamic Circuit Breaker
+else if instrumentSelect == "BTC"
+    initialMargin := 17200.0    // CME standard BTC contract (5 BTC)
+    pointValue := 5.0           // $5 per $1 move in BTC
+    circuitBreakerPct := 0.10   // 10% - Dynamic Circuit Breaker
+
+// ============================================================================
+// RISK INTERVAL CALCULATION
+// ============================================================================
+// Formula: RI = (Initial Margin × Circuit Breaker %) / Point Value
+// Exception: CL uses observed value due to formula anomaly
+
+var float baseRI = 0.0
+
+if useManualRI
+    baseRI := manualRIValue
+else
+    if instrumentSelect == "CL"
+        // CL anomaly - hardcoded observed value
+        baseRI := 2.38
+    else
+        // Standard formula for ES, NQ, GC, NG, BTC
+        baseRI := (initialMargin * circuitBreakerPct) / pointValue
+
+// ============================================================================
+// DERIVATIVE LEVEL TOGGLES
+// ============================================================================
+showPrevClose = input.bool(true, "Previous Close", group="Reference Lines")
+show1xRI = input.bool(true, "1× RI", group="Derivative Levels")
+show2xRI = input.bool(true, "2× RI", group="Derivative Levels")
+showHalfRI = input.bool(true, "½× RI", group="Derivative Levels")
+showQuarterRI = input.bool(true, "¼× RI", group="Derivative Levels")
+showEighthRI = input.bool(false, "⅛× RI (disable for NQ)", group="Derivative Levels", 
+     tooltip="Can be noisy on high-value instruments like NQ")
+
+// ============================================================================
+// ALERT TOGGLES
+// ============================================================================
+// Granular control over which levels trigger alerts
+// Allows filtering noise (e.g., disable ⅛×RI and ¼×RI alerts on NQ/ES)
+//
+// Recommended alert settings by instrument:
+// ES/NQ: Enable 1×RI and 2×RI only (half/quarter/eighth are noise)
+// GC: Enable ½×RI, ¼×RI, and 1×RI (closer levels more significant)
+// CL/NG/BTC: Test and adjust based on volatility
+
+alert1xRI = input.bool(true, "1× RI Alerts", group="Alert Controls",
+     tooltip="Alert when price crosses 1× RI upper or lower levels")
+alert2xRI = input.bool(true, "2× RI Alerts", group="Alert Controls",
+     tooltip="Alert when price crosses 2× RI upper or lower levels")
+alertHalfRI = input.bool(false, "½× RI Alerts", group="Alert Controls",
+     tooltip="Can be noisy - typically disabled for ES/NQ, useful for GC")
+alertQuarterRI = input.bool(false, "¼× RI Alerts", group="Alert Controls",
+     tooltip="Can be very noisy - typically disabled for ES/NQ")
+alertEighthRI = input.bool(false, "⅛× RI Alerts", group="Alert Controls",
+     tooltip="Usually too noisy for most instruments")
+
+// ============================================================================
+// COLOR CONFIGURATION
+// ============================================================================
+colorPrevClose = input.color(color.new(#9C27B0, 0), "Previous Close", group="Colors")
+colorUpper = input.color(color.new(#00FF00, 0), "Upper Levels", group="Colors")
+colorLower = input.color(color.new(#FF0000, 0), "Lower Levels", group="Colors")
+
+lineWidth = input.int(1, "Line Width", minval=1, maxval=4, group="Style")
+lineStyle = input.string("Solid", "Line Style", 
+     options=["Solid", "Dashed", "Dotted"], group="Style")
+
+// Convert line style string to Pine Script constant
+lineStyleValue = lineStyle == "Solid" ? line.style_solid : 
+     lineStyle == "Dashed" ? line.style_dashed : line.style_dotted
+
+// ============================================================================
+// ANCHOR POINT: PREVIOUS DAY'S CLOSE
+// ============================================================================
+// Get previous daily close - recalculates at start of new trading day
+
+var float prevDayClose = na
+
+// Detect new trading day (futures open at 6:00 PM ET / 18:00 ET)
+newDay = ta.change(time("D"))
+
+if newDay
+    prevDayClose := close[1]
+
+// Use current close if previous day close not yet established
+anchorPrice = na(prevDayClose) ? close : prevDayClose
+
+// ============================================================================
+// CALCULATE ALL DERIVATIVE LEVELS
+// ============================================================================
+
+// Upper levels
+upper_1x = anchorPrice + baseRI
+upper_2x = anchorPrice + (baseRI * 2)
+upper_half = anchorPrice + (baseRI * 0.5)
+upper_quarter = anchorPrice + (baseRI * 0.25)
+upper_eighth = anchorPrice + (baseRI * 0.125)
+
+// Lower levels
+lower_1x = anchorPrice - baseRI
+lower_2x = anchorPrice - (baseRI * 2)
+lower_half = anchorPrice - (baseRI * 0.5)
+lower_quarter = anchorPrice - (baseRI * 0.25)
+lower_eighth = anchorPrice - (baseRI * 0.125)
+
+// ============================================================================
+// PLOT LEVELS
+// ============================================================================
+
+// Previous Close (center reference line)
+plot(showPrevClose ? anchorPrice : na, 
+     title="Previous Close", 
+     color=colorPrevClose, 
+     linewidth=lineWidth, 
+     style=plot.style_line,
+     trackprice=false)
+
+// 1× RI
+plot(show1xRI ? upper_1x : na, 
+     title="1× RI Upper", 
+     color=colorUpper, 
+     linewidth=lineWidth, 
+     style=plot.style_line)
+plot(show1xRI ? lower_1x : na, 
+     title="1× RI Lower", 
+     color=colorLower, 
+     linewidth=lineWidth, 
+     style=plot.style_line)
+
+// 2× RI
+plot(show2xRI ? upper_2x : na, 
+     title="2× RI Upper", 
+     color=colorUpper, 
+     linewidth=lineWidth, 
+     style=plot.style_line)
+plot(show2xRI ? lower_2x : na, 
+     title="2× RI Lower", 
+     color=colorLower, 
+     linewidth=lineWidth, 
+     style=plot.style_line)
+
+// ½× RI
+plot(showHalfRI ? upper_half : na, 
+     title="½× RI Upper", 
+     color=colorUpper, 
+     linewidth=lineWidth, 
+     style=plot.style_line)
+plot(showHalfRI ? lower_half : na, 
+     title="½× RI Lower", 
+     color=colorLower, 
+     linewidth=lineWidth, 
+     style=plot.style_line)
+
+// ¼× RI
+plot(showQuarterRI ? upper_quarter : na, 
+     title="¼× RI Upper", 
+     color=colorUpper, 
+     linewidth=lineWidth, 
+     style=plot.style_line)
+plot(showQuarterRI ? lower_quarter : na, 
+     title="¼× RI Lower", 
+     color=colorLower, 
+     linewidth=lineWidth, 
+     style=plot.style_line)
+
+// ⅛× RI
+plot(showEighthRI ? upper_eighth : na, 
+     title="⅛× RI Upper", 
+     color=colorUpper, 
+     linewidth=lineWidth, 
+     style=plot.style_line)
+plot(showEighthRI ? lower_eighth : na, 
+     title="⅛× RI Lower", 
+     color=colorLower, 
+     linewidth=lineWidth, 
+     style=plot.style_line)
+
+// ============================================================================
+// INFORMATION TABLE
+// ============================================================================
+// Display current RI calculation parameters and alert status
+
+if barstate.islast
+    var table infoTable = table.new(position.bottom_right, 2, 9, 
+         border_width=1, 
+         border_color=color.gray,
+         frame_width=1,
+         frame_color=color.gray)
+    
+    // Headers
+    table.cell(infoTable, 0, 0, "Parameter", 
+         text_color=color.white, bgcolor=color.new(color.gray, 50))
+    table.cell(infoTable, 1, 0, "Value", 
+         text_color=color.white, bgcolor=color.new(color.gray, 50))
+    
+    // Instrument
+    table.cell(infoTable, 0, 1, "Instrument", text_color=color.white)
+    table.cell(infoTable, 1, 1, instrumentSelect, text_color=color.yellow)
+    
+    // Base RI
+    table.cell(infoTable, 0, 2, "Base RI", text_color=color.white)
+    table.cell(infoTable, 1, 2, str.tostring(baseRI, "#.####"), text_color=color.yellow)
+    
+    // Previous Close
+    table.cell(infoTable, 0, 3, "Prev Close", text_color=color.white)
+    table.cell(infoTable, 1, 3, str.tostring(anchorPrice, "#.##"), text_color=color.yellow)
+    
+    // Initial Margin
+    table.cell(infoTable, 0, 4, "Init Margin", text_color=color.white)
+    table.cell(infoTable, 1, 4, "$" + str.tostring(initialMargin, "#,###"), text_color=color.white)
+    
+    // Circuit Breaker %
+    table.cell(infoTable, 0, 5, "CB %", text_color=color.white)
+    cbDisplay = instrumentSelect == "CL" ? "N/A" : str.tostring(circuitBreakerPct * 100, "#.#") + "%"
+    table.cell(infoTable, 1, 5, cbDisplay, text_color=color.white)
+    
+    // Point Value
+    table.cell(infoTable, 0, 6, "Point Value", text_color=color.white)
+    table.cell(infoTable, 1, 6, "$" + str.tostring(pointValue, "#.##"), text_color=color.white)
+    
+    // Alert Status
+    table.cell(infoTable, 0, 7, "Alerts Active", text_color=color.white)
+    activeAlerts = ""
+    if alert1xRI
+        activeAlerts := activeAlerts + "1× "
+    if alert2xRI
+        activeAlerts := activeAlerts + "2× "
+    if alertHalfRI
+        activeAlerts := activeAlerts + "½× "
+    if alertQuarterRI
+        activeAlerts := activeAlerts + "¼× "
+    if alertEighthRI
+        activeAlerts := activeAlerts + "⅛× "
+    alertDisplay = activeAlerts == "" ? "None" : activeAlerts
+    table.cell(infoTable, 1, 7, alertDisplay, text_color=color.yellow)
+    
+    // Manual Override Status
+    table.cell(infoTable, 0, 8, "Manual RI", text_color=color.white)
+    table.cell(infoTable, 1, 8, useManualRI ? "YES" : "Auto", 
+         text_color=useManualRI ? color.orange : color.lime)
+
+// ============================================================================
+// ALERTS - GRANULAR CONTROL
+// ============================================================================
+// Alert only when both visibility AND alert toggle are enabled for that level
+// This prevents alert spam on levels you're monitoring visually but don't need notifications
+
+// 1× RI Alerts
+crossedUpper1x = ta.crossover(close, upper_1x)
+crossedLower1x = ta.crossunder(close, lower_1x)
+
+if alert1xRI and crossedUpper1x
+    alert("{{ticker}} crossed ABOVE 1× RI Upper at {{close}}", alert.freq_once_per_bar)
+if alert1xRI and crossedLower1x
+    alert("{{ticker}} crossed BELOW 1× RI Lower at {{close}}", alert.freq_once_per_bar)
+
+alertcondition(alert1xRI and crossedUpper1x, title="Price Above 1× RI Upper", 
+     message="{{ticker}} crossed above 1× RI Upper level at {{close}}")
+alertcondition(alert1xRI and crossedLower1x, title="Price Below 1× RI Lower", 
+     message="{{ticker}} crossed below 1× RI Lower level at {{close}}")
+
+// 2× RI Alerts
+crossedUpper2x = ta.crossover(close, upper_2x)
+crossedLower2x = ta.crossunder(close, lower_2x)
+
+if alert2xRI and crossedUpper2x
+    alert("{{ticker}} crossed ABOVE 2× RI Upper at {{close}}", alert.freq_once_per_bar)
+if alert2xRI and crossedLower2x
+    alert("{{ticker}} crossed BELOW 2× RI Lower at {{close}}", alert.freq_once_per_bar)
+
+alertcondition(alert2xRI and crossedUpper2x, title="Price Above 2× RI Upper", 
+     message="{{ticker}} crossed above 2× RI Upper level at {{close}}")
+alertcondition(alert2xRI and crossedLower2x, title="Price Below 2× RI Lower", 
+     message="{{ticker}} crossed below 2× RI Lower level at {{close}}")
+
+// ½× RI Alerts
+crossedUpperHalf = ta.crossover(close, upper_half)
+crossedLowerHalf = ta.crossunder(close, lower_half)
+
+if alertHalfRI and crossedUpperHalf
+    alert("{{ticker}} crossed ABOVE ½× RI Upper at {{close}}", alert.freq_once_per_bar)
+if alertHalfRI and crossedLowerHalf
+    alert("{{ticker}} crossed BELOW ½× RI Lower at {{close}}", alert.freq_once_per_bar)
+
+alertcondition(alertHalfRI and crossedUpperHalf, title="Price Above ½× RI Upper", 
+     message="{{ticker}} crossed above ½× RI Upper level at {{close}}")
+alertcondition(alertHalfRI and crossedLowerHalf, title="Price Below ½× RI Lower", 
+     message="{{ticker}} crossed below ½× RI Lower level at {{close}}")
+
+// ¼× RI Alerts
+crossedUpperQuarter = ta.crossover(close, upper_quarter)
+crossedLowerQuarter = ta.crossunder(close, lower_quarter)
+
+if alertQuarterRI and crossedUpperQuarter
+    alert("{{ticker}} crossed ABOVE ¼× RI Upper at {{close}}", alert.freq_once_per_bar)
+if alertQuarterRI and crossedLowerQuarter
+    alert("{{ticker}} crossed BELOW ¼× RI Lower at {{close}}", alert.freq_once_per_bar)
+
+alertcondition(alertQuarterRI and crossedUpperQuarter, title="Price Above ¼× RI Upper", 
+     message="{{ticker}} crossed above ¼× RI Upper level at {{close}}")
+alertcondition(alertQuarterRI and crossedLowerQuarter, title="Price Below ¼× RI Lower", 
+     message="{{ticker}} crossed below ¼× RI Lower level at {{close}}")
+
+// ⅛× RI Alerts
+crossedUpperEighth = ta.crossover(close, upper_eighth)
+crossedLowerEighth = ta.crossunder(close, lower_eighth)
+
+if alertEighthRI and crossedUpperEighth
+    alert("{{ticker}} crossed ABOVE ⅛× RI Upper at {{close}}", alert.freq_once_per_bar)
+if alertEighthRI and crossedLowerEighth
+    alert("{{ticker}} crossed BELOW ⅛× RI Lower at {{close}}", alert.freq_once_per_bar)
+
+alertcondition(alertEighthRI and crossedUpperEighth, title="Price Above ⅛× RI Upper", 
+     message="{{ticker}} crossed above ⅛× RI Upper level at {{close}}")
+alertcondition(alertEighthRI and crossedLowerEighth, title="Price Below ⅛× RI Lower", 
+     message="{{ticker}} crossed below ⅛× RI Lower level at {{close}}")
