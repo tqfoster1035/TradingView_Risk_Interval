@@ -13,25 +13,17 @@ symbolRoot = syminfo.root
 // Detect instrument based on symbol
 string detectedInstrument = "ES"  // Default fallback
 
-if str.contains(symbolRoot, "ES") or str.contains(currentSymbol, "ES")
-    detectedInstrument := "ES"
-else if str.contains(symbolRoot, "NQ") or str.contains(currentSymbol, "NQ")
+if str.contains(symbolRoot, "NQ") or str.contains(currentSymbol, "NQ")
     detectedInstrument := "NQ"
-else if str.contains(symbolRoot, "GC") or str.contains(currentSymbol, "GC")
-    detectedInstrument := "GC"
-else if str.contains(symbolRoot, "CL") or str.contains(currentSymbol, "CL")
-    detectedInstrument := "CL"
-else if str.contains(symbolRoot, "NG") or str.contains(currentSymbol, "NG")
-    detectedInstrument := "NG"
-else if str.contains(symbolRoot, "BTC") or str.contains(currentSymbol, "BTC") or str.contains(currentSymbol, "MBT")
-    detectedInstrument := "BTC"
+else
+    detectedInstrument := "ES"
 
 // Manual instrument override (for when auto-detection fails or user wants different instrument)
 useManualInstrument = input.bool(false, "Manual Instrument Override",
      group="Instrument Settings",
      tooltip="Enable to manually select instrument instead of auto-detection")
 manualInstrumentSelect = input.string("ES", "Manual Instrument",
-     options=["ES", "NQ", "GC", "CL", "NG", "BTC"],
+     options=["ES", "NQ"],
      group="Instrument Settings",
      tooltip="Only used when Manual Instrument Override is enabled")
 
@@ -63,43 +55,19 @@ else if instrumentSelect == "NQ"
     initialMargin := 30732.0    // Verified speculator margin
     pointValue := 20.0
     circuitBreakerPct := 0.137  // 13.7% - Empirically-tested value (produces RI ≈ 210.25)
-else if instrumentSelect == "GC"
-    initialMargin := 20000.0    // Verified speculator margin
-    pointValue := 100.0
-    circuitBreakerPct := 0.09   // 9% - Dynamic Circuit Breaker 10% variant
-else if instrumentSelect == "CL"
-    // CL is an anomaly - formula doesn't apply, using observed RI
-    initialMargin := 5237.0     // Maintenance (initial varies widely)
-    pointValue := 1000.0
-    circuitBreakerPct := 0.0    // Not used - hardcoded RI below
-else if instrumentSelect == "NG"
-    initialMargin := 31000.0    // Calculated from RI 0.31
-    pointValue := 10000.0
-    circuitBreakerPct := 0.10   // 10% - Dynamic Circuit Breaker
-else if instrumentSelect == "BTC"
-    // BTC is using empirically-tested value from 2022 indicator (870)
-    // This value still works correctly and should not be changed
-    initialMargin := 43500.0    // Equivalent margin to produce RI = 870
-    pointValue := 5.0           // $5 per $1 move in BTC
-    circuitBreakerPct := 0.10   // 10% - Dynamic Circuit Breaker
 
 // ============================================================================
 // RISK INTERVAL CALCULATION
 // ============================================================================
 // Formula: RI = (Initial Margin × Circuit Breaker %) / Point Value
-// Exception: CL uses observed value due to formula anomaly
 
 var float baseRI = 0.0
 
 if useManualRI
     baseRI := manualRIValue
 else
-    if instrumentSelect == "CL"
-        // CL anomaly - hardcoded observed value
-        baseRI := 2.38
-    else
-        // Standard formula for ES, NQ, GC, NG, BTC
-        baseRI := (initialMargin * circuitBreakerPct) / pointValue
+    // Standard formula for ES and NQ
+    baseRI := (initialMargin * circuitBreakerPct) / pointValue
 
 // ============================================================================
 // DERIVATIVE LEVEL TOGGLES
@@ -132,10 +100,8 @@ showLabelEighthRI = input.bool(false, "⅛× RI Labels", group="Labels")
 // Granular control over which levels trigger alerts
 // Allows filtering noise (e.g., disable ⅛×RI and ¼×RI alerts on NQ/ES)
 //
-// Recommended alert settings by instrument:
-// ES/NQ: Enable 1×RI and 2×RI only (half/quarter/eighth are noise)
-// GC: Enable ½×RI, ¼×RI, and 1×RI (closer levels more significant)
-// CL/NG/BTC: Test and adjust based on volatility
+// Recommended alert settings:
+// ES/NQ: Enable 1×RI, 2×RI, and 4×RI (half/quarter/eighth are typically noise)
 
 alert1xRI = input.bool(true, "1× RI Alerts", group="Alert Controls",
      tooltip="Alert when price crosses 1× RI upper or lower levels")
@@ -431,8 +397,7 @@ if barstate.islast
 
     // Circuit Breaker %
     table.cell(infoTable, 0, 6, "CB %", text_color=color.white)
-    cbDisplay = instrumentSelect == "CL" ? "N/A" : str.tostring(circuitBreakerPct * 100, "#.#") + "%"
-    table.cell(infoTable, 1, 6, cbDisplay, text_color=color.white)
+    table.cell(infoTable, 1, 6, str.tostring(circuitBreakerPct * 100, "#.#") + "%", text_color=color.white)
 
     // Point Value
     table.cell(infoTable, 0, 7, "Point Value", text_color=color.white)
